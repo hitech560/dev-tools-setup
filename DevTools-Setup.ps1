@@ -1,3 +1,7 @@
+# DevTools-Setup.ps1
+# PowerShell script to bootstrap and configure development tools on Windows
+# Requires Administrator privileges
+
 $progressPreference = 'silentlyContinue'
 Write-Host -ForegroundColor Yellow "🌋 Installing WinGet PowerShell module from PSGallery ..."
 Install-PackageProvider -Name NuGet -Force | Out-Null

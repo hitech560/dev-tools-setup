@@ -1,10 +1,12 @@
-﻿# Set console and output encoding to UTF-8 to avoid Chinese output garbling
+﻿# Requires Administrator privileges
+
+# Set console and output encoding to UTF-8 to avoid Chinese output garbling
 $OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
 $LogPath     = "$Env:ProgramData\devtools-setup-log.txt"
-$AppListPath = "$Env:ProgramData\app-list.json"
+# $AppListPath = "$Env:ProgramData\app-list.json"
 
-$Summary = @()
+# $Summary = @()
 
 function Log {
     param([string]$Message)
@@ -13,7 +15,7 @@ function Log {
     Write-Host $Message
 }
 
-function Try-RepairWinget {
+function Test-RepairWinget {
     param (
         [int]$MaxAttempts = 3,
         [int]$DelaySeconds = 5
@@ -34,7 +36,7 @@ function Try-RepairWinget {
     return $false
 }
 
-function Ensure-WinGetAvailable {
+function Test-WinGetAvailable {
     $progressPreference = 'silentlyContinue'
 
     if (Get-Command winget -ErrorAction SilentlyContinue) {
@@ -47,7 +49,7 @@ function Ensure-WinGetAvailable {
     try {
         Install-PackageProvider -Name NuGet -Force -Scope AllUsers | Out-Null
         Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope AllUsers | Out-Null
-        if (Try-RepairWinget) {
+        if (Test-RepairWinget) {
             if (Get-Command winget -ErrorAction SilentlyContinue) {
                 Log "✅ Winget installed successfully via PowerShell module."
                 return
@@ -84,4 +86,4 @@ function Ensure-WinGetAvailable {
     }
 }
 
-Ensure-WinGetAvailable
+Test-WinGetAvailable
