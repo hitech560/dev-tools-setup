@@ -1,0 +1,132 @@
+{
+  "apps": [
+    {
+      "name": "7-Zip",
+      "id": "7zip.7zip",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Notepad++",
+      "id": "Notepad++.Notepad++",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Node.js LTS",
+      "id": "OpenJS.NodeJS.LTS",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "AWS CLI",
+      "id": "Amazon.AWSCLI",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "AWS SAM CLI",
+      "id": "Amazon.SAM-CLI",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Git",
+      "id": "Git.Git",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Windows Terminal",
+      "id": "Microsoft.WindowsTerminal",
+      "scope": "user",
+      "update": true
+    },
+    {
+      "name": "PyCharm Community Edition",
+      "id": "JetBrains.PyCharm.Community",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Visual Studio Code",
+      "id": "Microsoft.VisualStudioCode",
+      "scope": "machine",
+      "update": true,
+      "extensions": [
+        "AmazonWebServices.amazon-q-vscode",
+        "AmazonWebServices.aws-toolkit-vscode",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "Postman.postman-for-vscode"
+      ]
+    },
+    {
+      "name": "Microsoft SQL Server Management Studio",
+      "id": "Microsoft.SQLServerManagementStudio",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Docker Desktop",
+      "id": "Docker.DockerDesktop",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "DBeaver",
+      "id": "DBeaver.DBeaver.Community",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Amazon WorkSpaces",
+      "id": "Amazon.WorkspacesClient",
+      "scope": "none",
+      "update": true
+    },
+    {
+      "name": "draw.io",
+      "id": "JGraph.Draw",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Amazon Athena ODBC Driver",
+      "id": "Amazon.AthenaODBCDriver.2",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "psqlodbc",
+      "id": "PostgreSQL.psqlODBC",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Microsoft ODBC Driver 18 for SQL Server",
+      "id": "Microsoft.msodbcsql.18",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "Microsoft PowerBI Desktop",
+      "id": "Microsoft.PowerBI",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "WinDirStat",
+      "id": "WinDirStat.WinDirStat",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "WinSCP",
+      "id": "WinSCP.WinSCP",
+      "scope": "machine",
+      "update": true
+    }
+  ]
+}

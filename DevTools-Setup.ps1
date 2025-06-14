@@ -1,46 +1,85 @@
-# DevTools-Setup.ps1
-# PowerShell script to bootstrap and configure development tools on Windows
-# Requires Administrator privileges
+﻿# DevSetup.ps1 - Run as Administrator
 
-$progressPreference = 'silentlyContinue'
-Write-Host -ForegroundColor Yellow "🌋 Installing WinGet PowerShell module from PSGallery ..."
-Install-PackageProvider -Name NuGet -Force | Out-Null
-Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
-Write-Host "Using Repair-WinGetPackageManager cmdlet to bootstrap WinGet ..."
-Repair-WinGetPackageManager -AllUsers
-Write-Host "Done."
+# Set console and output encoding to UTF-8 to avoid Chinese output garbling
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
-Write-Host -ForegroundColor Yellow "🌋 Installing AWS Command Line Interface ..."
-winget install -e --id Amazon.AWSCLI
-Write-Host "Done."
+$LogPath = "$Env:ProgramData\dev-setup-log.txt"
+$AppListPath = "$Env:ProgramData\app-list.json"
 
-Write-Host -ForegroundColor Yellow "🌋 Installing AWS SAM Command Line Interface ..."
-winget install -e --id Amazon.SAM-CLI
-Write-Host "Done."
+function Log($msg) {
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$ts`t$msg" | Out-File -FilePath $LogPath -Append -Encoding utf8
+    Write-Host $msg
+}
 
-Write-Host -ForegroundColor Yellow "🌋 Installing Node.js LTS ..."
-winget install -e --id OpenJS.NodeJS.LTS
-Write-Host "Done."
+function Test-Winget {
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Log "✅ Winget is already available."
+        return
+    }
 
-Write-Host -ForegroundColor Yellow "🌋 Installing Git ..."
-winget install -e --id Git.Git
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User") 
-Write-Host -ForegroundColor Yellow "🌋 Installing AWS CDK ..."
-npm install -g aws-cdk
-Write-Host "Done."
+    Log "⚠ Winget not detected. Attempting App Installer method ..."
+    try {
+        $uri = "https://aka.ms/getwinget"
+        $installerPath = "$env:TEMP\AppInstaller.msixbundle"
+        Invoke-WebRequest -Uri $uri -OutFile $installerPath
+        Add-AppxPackage -Path $installerPath
+        Start-Sleep -Seconds 5
+    }
+    catch {
+        Log "⚠ App Installer method failed. Falling back to PowerShell module ..."
+        Install-PackageProvider -Name NuGet -Force | Out-Null
+        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope CurrentUser | Out-Null
+        Import-Module Microsoft.WinGet.Client -Force
+        Repair-WinGetPackageManager
+        Start-Sleep -Seconds 5
+    }
 
-Write-Host -ForegroundColor Yellow "🌋 Installing uv ..."
-winget install --id=astral-sh.uv  -e
-Write-Host "Done."
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        Log "❌ Winget installation failed."
+        exit 1
+    }
+    else {
+        Log "✅ Winget installed successfully."
+    }
+}
 
-# Write-Host -ForegroundColor Yellow "🌋 Installing Microsoft Visual Studio Code ..."
-# winget install -e --id Microsoft.VisualStudioCode
-# Write-Host "Done."
+function Install-AppIfMissing {
+    param([string]$AppId, [string]$AppName)
+    $installed = winget list --id $AppId -e 2>$null
+    if (-not $installed) {
+        Log "📦 Installing $AppName ..."
+        winget install --id $AppId -e --silent --accept-package-agreements --accept-source-agreements
+    }
+    else {
+        Log "✅ $AppName already installed."
+    }
+}
 
-Write-Host -ForegroundColor Yellow "🌋 Force reinstall of VS-Code to ensure Path and Shell integration ..."
-winget install --force Microsoft.VisualStudioCode --override '/VERYSILENT /SP- /MERGETASKS="!runcode,!desktopicon,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"'
-Write-Host "Done."
+Log "🛠 Starting development environment setup ..."
+Test-Winget
 
-Write-Host -ForegroundColor Yellow "🌋 Installing Notepad++ ..."
-winget install -e --id Notepad++.Notepad++
-Write-Host "Done."
+if (-not (Test-Path $AppListPath)) {
+    Log "❌ App list JSON not found at $AppListPath"
+    exit 1
+}
+$appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
+
+foreach ($app in $appListRaw.apps) {
+    Install-AppIfMissing -AppId $app.id -AppName $app.name
+
+    if ($app.extensions) {
+        foreach ($ext in $app.extensions) {
+            try {
+                code --install-extension $ext --force
+                Log "✅ VS Code extension installed: $ext"
+            }
+            catch {
+                Log "❌ Failed to install extension ${ext}: $_"
+            }
+        }
+    }
+}
+
+Log "✅ Dev environment setup complete."
