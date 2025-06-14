@@ -72,11 +72,12 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
 if (Get-Command code -ErrorAction SilentlyContinue) {
     try {
         $extensions = @(
-            # "AmazonWebServices.aws-q",
+            "AmazonWebServices.amazon-q-vscode",
             "AmazonWebServices.aws-toolkit-vscode",
             "ms-azuretools.vscode-docker",
             "ms-python.python",
-            "ms-toolsai.jupyter"
+            "ms-toolsai.jupyter",
+            "Postman.postman-for-vscode"
         )
         foreach ($ext in $extensions) {
             code --install-extension $ext --force
