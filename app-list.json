@@ -169,6 +169,18 @@
       "id": "Postman.Postman",
       "scope": "user",
       "update": true
-    }    
+    },
+    {
+      "name": "AWS CDK",
+      "id": "AWS.CDK",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "uv",
+      "id": "astral-sh.uv",
+      "scope": "user",
+      "update": true
+    }
   ]
 }

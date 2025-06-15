@@ -36,17 +36,17 @@
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
-$LogPath = "$Env:ProgramData\devtools-setup-log.txt"
+$LogPath     = "$Env:ProgramData\devtools-setup-log.txt"
 $AppListPath = "$Env:ProgramData\app-list.json"
 
 $Summary = @()
 
-function Log {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding utf8
-    Write-Host $Message
-}
+# function Log {
+#     param([string]$Message)
+#     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+#     "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding utf8
+#     $Message | Write-Host
+# }
 # function Log {
 #     param([string]$Message)
 #     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -63,6 +63,24 @@ function Log {
 # 
 #     Write-Host $Message
 # }
+function Log {
+    param(
+        [string[]]$msg  # Accepts single or multiple lines
+    )
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+    for ($i = 0; $i -lt $msg.Count; $i++) {
+        if ($i -gt 0) {
+            $outputLine = "`t"*3 + $msg[$i]
+        }
+        else {
+            $outputLine = "$ts`t" + $msg[$i]
+        }
+
+        Write-Host $outputLine
+        $outputLine | Out-File -FilePath $logPath -Append -Encoding utf8
+    }
+}
 
 # Log "🔄 Updating winget sources to proactively accept agreements ..."
 # winget source list | Out-Null
@@ -478,7 +496,7 @@ Test-WinGetAvailable
 # Install-AppIfMissing -AppId "WinSCP.WinSCP" -AppName "WinSCP" # system
 
 if (-not (Test-Path $AppListPath)) {
-    Log "❌ App list JSON not found at $AppListPath"
+    Log "❌ App list JSON file not found: $AppListPath"
     exit 1
 }
 $appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
@@ -577,7 +595,7 @@ if (Test-CommandAvailable "wsl") {
     }
     else {
         Log "➡ Installing Ubuntu with WSL ..."
-        Install-WSLWithUbuntu
+        # Install-WSLWithUbuntu
     }
 }
 else {

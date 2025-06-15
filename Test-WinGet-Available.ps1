@@ -22,7 +22,7 @@ function Test-RepairWinget {
     )
     for ($i = 1; $i -le $MaxAttempts; $i++) {
         try {
-            Log "⚙ Attempt ${i}: Repairing Winget package manager..."
+            Log "⚙ Attempt ${i}: Repairing Winget package manager ..."
             Repair-WinGetPackageManager -AllUser
             Log "✅ Repair-WinGetPackageManager succeeded on attempt $i."
             return $true
@@ -44,7 +44,7 @@ function Test-WinGetAvailable {
         return
     }
 
-    Log "🛠 Attempting to install Winget via PowerShell module..."
+    Log "🛠 Attempting to install Winget via PowerShell module ..."
 
     try {
         Install-PackageProvider -Name NuGet -Force -Scope AllUsers | Out-Null
@@ -61,7 +61,7 @@ function Test-WinGetAvailable {
         Log "⚠ PowerShell module method failed: $_"
     }
 
-    Log "🔁 Falling back to install Winget via App Installer (.msixbundle)..."
+    Log "🔁 Falling back to install Winget via App Installer (.msixbundle) ..."
 
     try {
         $appInstallerUri = "https://aka.ms/getwinget"
