@@ -63,6 +63,18 @@
       ]
     },
     {
+      "name": "PowerToys",
+      "id": "Microsoft.PowerToys",
+      "scope": "user",
+      "update": true
+    },
+    {
+      "name": "Google Chrome",
+      "id": "Google.Chrome",
+      "scope": "machine",
+      "update": true
+    },    
+    {
       "name": "Microsoft SQL Server Management Studio",
       "id": "Microsoft.SQLServerManagementStudio",
       "scope": "machine",
@@ -117,6 +129,30 @@
       "update": true
     },
     {
+      "name": "Adobe Acrobat Reader (64-bit)",
+      "id": "Adobe.Acrobat.Reader.64-bit",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "RingCentral",
+      "id": "RingCentral.RingCentral",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "DbVisualizer",
+      "id": "DBVis.DBVisualizer",
+      "scope": "machine",
+      "update": true
+    },
+    {
+      "name": "KeePassXC",
+      "id": "KeePassXCTeam.KeePassXC",
+      "scope": "machine",
+      "update": true
+    },
+    {
       "name": "WinDirStat",
       "id": "WinDirStat.WinDirStat",
       "scope": "machine",
@@ -127,6 +163,12 @@
       "id": "WinSCP.WinSCP",
       "scope": "machine",
       "update": true
-    }
+    },
+    {
+      "name": "Postman",
+      "id": "Postman.Postman",
+      "scope": "user",
+      "update": true
+    }    
   ]
 }
