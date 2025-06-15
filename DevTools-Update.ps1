@@ -7,11 +7,34 @@ $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
 $logPath = "$env:ProgramData\devtools-update-log.txt"
 
+# Add current user and system paths to PATH environment variable
+$Env:PATH += ";$Env:LOCALAPPDATA\Microsoft\WindowsApps"
+$Env:PATH += ";$Env:UserProfile\.local\bin"
+
 function Log {
     param([string]$msg)
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     "$ts`t$msg" | Out-File -FilePath $logPath -Append -Encoding utf8
     Write-Host $msg
+}
+
+# Attempt to find full path to winget.exe
+$WingetPath = (Get-Command "winget.exe" -ErrorAction SilentlyContinue)?.Source
+if (-not $WingetPath) {
+    $possiblePaths = @(
+        "$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe",
+        "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\winget.exe"
+    )
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            $WingetPath = $path
+            break
+        }
+    }
+}
+if (-not $WingetPath) {
+    Log "❌ winget not found in standard paths."
+    return
 }
 
 function Update-App {
@@ -21,7 +44,8 @@ function Update-App {
         $info = winget list --source winget --id $AppId -e 2>$null
         if ($info) {
             Log "🔄 Attempting to upgrade $AppName..."
-            winget upgrade --source winget --id $AppId -e --silent --accept-source-agreements --accept-package-agreements
+            # winget upgrade --source winget --id $AppId -e --silent --accept-source-agreements --accept-package-agreements
+            & $WingetPath upgrade --source winget --id $AppId -e --silent --accept-source-agreements --accept-package-agreements
             Log "✅ $AppName upgraded."
         } else {
             Log "⚠ $AppName not installed. Skipping."

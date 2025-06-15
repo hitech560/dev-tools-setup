@@ -31,8 +31,8 @@
 # winget source list
 # winget source update
 
+
 # Set console and output encoding to UTF-8 to avoid Chinese output garbling
-# $OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
@@ -47,19 +47,30 @@ function Log {
     "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding utf8
     Write-Host $Message
 }
+# function Log {
+#     param([string]$Message)
+#     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+#     $logLine = "$timestamp`t$Message"
+#     Add-Content -Path $LogPath -Value $logLine -Encoding utf8
+# }
+# function Log {
+#     param([string]$Message)
+#     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+#     $logLine = "$timestamp`t$Message"
+# 
+#     $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+#     [System.IO.File]::AppendAllText($LogPath, "$logLine`n", $utf8NoBom)
+# 
+#     Write-Host $Message
+# }
 
-function Approve-WingetAgreement {
-    Log "🔄 Updating winget sources to proactively accept agreements ..."
-    echo Y | winget list | Out-Null
-    echo Y | winget list --name "winget" | Out-Null
-    echo Y | winget source list | Out-Null
-    echo Y | winget source update | Out-Null
-}
+# Log "🔄 Updating winget sources to proactively accept agreements ..."
+# winget source list | Out-Null
+# winget source update | Out-Null
 
-function Test-Winget {
+function Install-Winget {
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Log "✅ Winget is already available."
-        Approve-WingetAgreement
         return
     }
 
@@ -78,12 +89,15 @@ function Test-Winget {
     # Check again
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Log "✅ Winget installed successfully via App Installer."
-        Approve-WingetAgreement
-        return
+        # return
+        # 🔁 Re-run this script now that winget is available
+        Log "🔁 Restarting script to continue setup with winget ..."
+        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+        exit
     }
 
     # Fallback: Install via Microsoft.WinGet.Client PowerShell module
-    Log "🔁 Trying PowerShell module method to bootstrap winget..."
+    Log "🔁 Trying PowerShell module method to bootstrap winget ..."
     try {
         Install-PackageProvider -Name NuGet -Force | Out-Null
         Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope CurrentUser | Out-Null
@@ -97,7 +111,10 @@ function Test-Winget {
 
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         Log "✅ Winget installed successfully via PowerShell module."
-        Approve-WingetAgreement
+        # 🔁 Re-run this script now that winget is available
+        Log "🔁 Restarting script to continue setup with winget..."
+        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+        exit
     }
     else {
         Log "❌ Winget installation failed using all methods. Please install it manually."
@@ -105,27 +122,136 @@ function Test-Winget {
     }
 }
 
+function Test-RepairWinget {
+    param (
+        [int]$MaxAttempts = 3,
+        [int]$DelaySeconds = 5
+    )
+    for ($i = 1; $i -le $MaxAttempts; $i++) {
+        try {
+            Log "⚙ Attempt ${i}: Repairing Winget package manager..."
+            Repair-WinGetPackageManager -AllUser
+            Log "✅ Repair-WinGetPackageManager succeeded on attempt $i."
+            return $true
+        }
+        catch {
+            Log "❌ Attempt $i failed: $_"
+            if ($i -lt $MaxAttempts) {
+                Start-Sleep -Seconds $DelaySeconds
+            }
+        }
+    }
+    return $false
+}
+
+function Test-WinGetAvailable {
+    $progressPreference = 'silentlyContinue'
+
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Log "✅ Winget is already available."
+        return
+    }
+
+    Log "🛠 Attempting to install Winget via PowerShell module..."
+
+    try {
+        Install-PackageProvider -Name NuGet -Force -Scope AllUsers | Out-Null
+        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope AllUsers | Out-Null
+        if (Test-RepairWinget) {
+            if (Get-Command winget -ErrorAction SilentlyContinue) {
+                Log "✅ Winget installed successfully via PowerShell module."
+                return
+            }
+        }
+        else {
+            Log "❌ Winget repair failed after multiple attempts."
+        }
+    }
+    catch {
+        Log "⚠ PowerShell module method failed: $_"
+    }
+
+    Log "🔁 Falling back to install Winget via App Installer (.msixbundle)..."
+
+    try {
+        $appInstallerUri = "https://aka.ms/getwinget"
+        $installerPath = "$env:TEMP\AppInstaller.msixbundle"
+
+        Invoke-WebRequest -Uri $appInstallerUri -OutFile $installerPath -UseBasicParsing
+        Add-AppxPackage -Path $installerPath
+        Start-Sleep -Seconds 5
+
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Log "✅ Winget installed successfully via App Installer."
+            Log "🔁 Restarting script to continue setup with Winget ..."
+            Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+        }
+        else {
+            Log "❌ Winget still not available after fallback, existing ..."
+        }
+    }
+    catch {
+        Log "❌ Failed to install Winget via App Installer fallback: $_ , existing ..."
+    }
+    finally {
+        exit
+    }
+}
+
 function Install-AppIfMissing {
     param (
         [string]$AppId,
         [string]$AppName,
+        [string]$AppScope, # app install scope: machine or user
+        [string]$AppSource, # app source: winget, msstore
         [switch]$CustomInstall,
         [string]$CustomCommand,
         [int]$Retries = 3
     )
-    $isInstalled = winget list --exact --name "$AppName" | Select-String "$AppName"
+    # $isInstalled = winget list --source winget --exact --name "$AppName" | Select-String -SimpleMatch "$AppName"
+    $isInstalled = echo Y | winget list --source winget --exact --id "$AppId" | Select-String -SimpleMatch "$AppId"
     if (-not $isInstalled) {
-        Log "➡ Installing $AppName..."
+        # Log "➡ Installing $AppName ..."
         for ($i = 1; $i -le $Retries; $i++) {
             try {
-                if ($CustomInstall) {
-                    Invoke-Expression $CustomCommand
+                if ($AppId -eq "Microsoft.VisualStudioCode") {
+                    Log "➡ Installing $AppName with scope $AppScope ..."
+                    echo Y | winget install --force --source winget --id $AppId --scope $AppScope --override '/VERYSILENT /SP- /MERGETASKS="!runcode,!desktopicon,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"'
+                }
+                elseif ($CustomInstall) {
+                    Log "➡ Custome installing $AppName ..."
+                    $installOutput = Invoke-Expression $CustomCommand 2>&1
                 }
                 else {
-                    winget install --id $AppId --exact --silent --accept-source-agreements --accept-package-agreements
+                    Log "➡ Installing $AppName ..."
+                    if ($AppScope -eq "none") {
+                        $installOutput = echo Y | winget install --source winget --id $AppId --exact --silent --accept-source-agreements --accept-package-agreements -e 2>&1
+                    }
+                    else {
+                        $installOutput = echo Y | winget install --source winget --scope $AppScope --id $AppId --exact --silent --accept-source-agreements --accept-package-agreements -e 2>&1
+                    }
                 }
-                Log "✅ Installed $AppName."
-                $Summary += "✅ $AppName installed."
+                $exitCode = $LASTEXITCODE
+                if ($exitCode -eq 0) {
+                    # Write-Host "✅ Installed $AppName.`n"
+                    Log "✅ Installed $AppName."
+                    $Summary += "✅ $AppName installed."
+                }
+                elseif ($installOutput -match "No package found matching input criteria") {
+                    # Write-Host "❌ Package not found for $AppName ($AppId).`n"
+                    Log "❌ Package not found for $AppName ($AppId)."
+                    $Summary += "❌ Package not found for $AppName ($AppId)."
+                }
+                else {
+                    # Write-Host "❌ Failed to install $AppName ($AppId). Exit code: $exitCode`n"
+                    # Write-Host $installOutput
+                    Log "❌ Failed to install $AppName ($AppId). Exit code: $exitCode"
+                    Log $installOutput
+                    $Summary += "❌ Failed to install $AppName ($AppId). Exit code: $exitCode"
+                    $Summary += $installOutput
+                }
+                # Log "✅ Installed $AppName."
+                # $Summary += "✅ $AppName installed."
                 break
             }
             catch {
@@ -140,13 +266,54 @@ function Install-AppIfMissing {
         }
     }
     else {
-        Log "✔ $AppName is already installed."
-        $Summary += "✔ $AppName already installed."
+        Log "✔ $AppName has been already installed, skipping."
+        $Summary += "✔ $AppName has been already installed, skipped."
     }
 }
 
 function Start-NewValidationSession {
     Start-Process powershell -ArgumentList "-NoExit", "-Command `"Write-Host '🔍 Verifying installed tools...'; node -v; npm -v; aws --version; sam --version; git --version; uv --version; code --version; cdk --version`""
+}
+
+function Test-InstalledTools {
+    Log "🔍 Verifying installed tools (new session) ..."
+    # $Summary += "🔍 Verifying installed tools (new session) ..."
+
+    $script = @'
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+
+$LogPath   = "$Env:ProgramData\devtools-setup-log.txt"
+function Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding utf8
+    Write-Host $Message
+}
+
+$tools = @("node", "npm", "aws", "sam", "git", "uv", "code", "cdk")
+foreach ($tool in $tools) {
+    try {
+        $version = & $tool --version
+        Log "✅ $tool found: $version"
+    } catch {
+        Log "❌ $tool not found."
+    }
+}
+'@
+
+    $tempFile = "$env:ProgramData\verify-tools.ps1"
+    Set-Content -Path $tempFile -Value $script -Encoding UTF8
+
+    $env:PATH += ";$env:ProgramFiles\nodejs;$env:AppData\npm"
+    $env:PATH += ";$env:AppData\Git\cmd;$env:ProgramFiles\Git\cmd"
+    $env:PATH += ";$env:ProgramFiles\Amazon\AWSSAMCLI\bin;$env:ProgramFiles\Amazon\AWSCLIV2"
+    $env:PATH += ";$env:AppData\Local\Programs\Microsoft VS Code\bin\"
+    $env:PATH += ";$env:ProgramFiles\Microsoft VS Code\bin\"
+    $env:Path += ";$env:UserProfile\.local\bin"
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tempFile
+    Remove-Item $tempFile -Force
 }
 
 function Install-VSCodeExtensions($extensions) {
@@ -173,11 +340,14 @@ function Install-VSCodeExtensions($extensions) {
 
 function Register-WeeklyUpdateTask {
     $taskName = "DevToolsAutoUpdate"
-    $updateScript = "$env:ProgramData\Update-DevTools.ps1"
+    $updateScript = "$env:ProgramData\DevTools-Update.ps1"
 
     if (-not (Test-Path $updateScript)) {
         $updateContent = @'
-$logPath = "$env:USERPROFILE\devtools-update-log.txt"
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+
+$LogPath   = "$Env:ProgramData\devtools-setup-log.txt"
 function Log($msg) {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     "$ts`t$msg" | Out-File -FilePath $logPath -Append -Encoding utf8
@@ -194,14 +364,81 @@ Log "✅ Weekly update completed."
     }
 
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$updateScript`""
-    $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 3am
+    $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Saturday -At 3am
     Register-ScheduledTask -Action $action -Trigger $trigger -TaskName $taskName -Description "Weekly auto-update for AWS Dev Tools" -User "SYSTEM" -RunLevel Highest -Force
     Log "📅 Registered weekly auto-update task: $taskName"
 }
 
+function Enable-FeatureIfMissing {
+    param (
+        [string]$FeatureName
+    )
+    $feature = Get-WindowsOptionalFeature -Online -FeatureName $FeatureName
+    if ($feature.State -ne 'Enabled') {
+        Log "🔧 Enabling Windows feature: $FeatureName ..."
+        Enable-WindowsOptionalFeature -Online -FeatureName $FeatureName -NoRestart | Out-Null
+    }
+    else {
+        Log "✅ Feature already enabled: $FeatureName"
+    }
+}
+
+function Install-WSLWithUbuntu {
+    $markerFile = "$env:ProgramData\DevTools-PostReboot-WSL.flag"
+
+    if (Test-Path $markerFile) {
+        Log "🔁 Resuming WSL setup after reboot ..."
+
+        # Try Ubuntu install again
+        try {
+            wsl --install -d Ubuntu
+            Remove-Item $markerFile -Force
+            Log "✅ Ubuntu installed successfully under WSL."
+        }
+        catch {
+            Log "❌ Ubuntu installation failed post-reboot: $_"
+        }
+
+        return
+    }
+
+    Log "➡ Enabling required features, Hypter-V, WSL 2 and Virtual Machine Platform etc ..."
+    Enable-FeatureIfMissing -FeatureName Microsoft-Windows-Subsystem-Linux
+    Enable-FeatureIfMissing -FeatureName VirtualMachinePlatform
+    Enable-FeatureIfMissing -FeatureName HypervisorPlatform
+    Enable-FeatureIfMissing -FeatureName Microsoft-Hyper-V-All
+
+    # Install WSL if not present
+    if (-not (wsl --version 2>$null)) {
+        Log "➡ Installing WSL update ..."
+        wsl --update
+    }
+
+    # Check if reboot is required
+    $pendingReboot = $null -ne (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending" -ErrorAction SilentlyContinue)
+    if ($pendingReboot) {
+        Log "🔄 A reboot is required to complete WSL setup."
+        New-Item -Path $markerFile -ItemType File -Force | Out-Null
+        Log "💾 Created marker file: $markerFile"
+        Log "💡 Please reboot manually and rerun the script to finish Ubuntu installation."
+        return
+    }
+
+    # Attempt direct Ubuntu install
+    try {
+        Log "➡ Installing Ubuntu ..."
+        wsl --install -d Ubuntu
+        Log "✅ Ubuntu installed successfully under WSL."
+    }
+    catch {
+        Log "❌ Ubuntu installation failed: $_"
+    }
+}
+
 # Start
 Log "🛠 Dev setup started at $(Get-Date)"
-Test-Winget
+# Ensure-Winget
+Test-WinGetAvailable
 
 # # Core dev tools (System-wide)
 # Install-AppIfMissing -AppId "7zip.7zip" -AppName "7-Zip" # system
@@ -247,7 +484,7 @@ if (-not (Test-Path $AppListPath)) {
 $appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
 
 foreach ($app in $appListRaw.apps) {
-    Install-AppIfMissing -AppId $app.id -AppName $app.name
+    Install-AppIfMissing -AppId $app.id -AppName $app.name -AppScope $app.scope
 
     if ($app.extensions) {
         # foreach ($ext in $app.extensions) {
@@ -258,16 +495,35 @@ foreach ($app in $appListRaw.apps) {
         #         Log "❌ Failed to install extension $ext: $_"
         #     }
         # }
+        if ($app.scope -eq "user") {
+            # install scope: user
+            $env:PATH += ";$env:UserProfile\AppData\Local\Programs\Microsoft VS Code\bin\"
+        }
+        else {
+            # install scope: machine
+            $env:PATH += ";$env:ProgramFiles\Microsoft VS Code\bin\"
+        }
         Install-VSCodeExtensions $app.extensions
     }
 }
 
-# UV - custom install (user)
-Install-AppIfMissing -AppName "uv" -CustomInstall -CustomCommand "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    Log "❌ uv is not available."
+    # UV - custom install (user)
+    # Install-AppIfMissing -AppName "uv" -CustomInstall -CustomCommand "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+    Install-AppIfMissing -AppId "astral-sh.uv" -AppName "uv" -CustomInstall -CustomCommand 'powershell -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"'
+}
+else {
+    Log "✅ uv is available: $(Get-Command uv).Source, skipped."
+}
 
 # AWS CDK via npm (user)
 if (-not (Get-Command cdk -ErrorAction SilentlyContinue)) {
     Log "➡ Installing AWS CDK via npm..."
+    # Add global npm bin to PATH in this session
+    # $npmGlobalBin = npm bin -g
+    # $env:PATH += ";$npmGlobalBin"
+    $env:PATH += ";$env:ProgramFiles\nodejs;$env:AppData\npm;C:\Program Files\Git\cmd"
     try {
         npm install -g aws-cdk
         Log "✅ AWS CDK installed."
@@ -279,23 +535,57 @@ if (-not (Get-Command cdk -ErrorAction SilentlyContinue)) {
     }
 }
 else {
-    Log "✔ AWS CDK is already installed."
-    $Summary += "✔ AWS CDK already installed."
+    Log "✔ AWS CDK has been already installed, skipped."
+    $Summary += "✔ AWS CDK has been already installed, skipped."
 }
 
-# WSL and Ubuntu (will silently fail on AWS WorkSpaces)
-try {
-    wsl --install -d Ubuntu
-    Log "✅ WSL and Ubuntu installed."
-    $Summary += "✅ WSL and Ubuntu installed."
+# # Enable Hyper-V (if you're using Hyper-V backend)
+# Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All -NoRestart
+# 
+# # WSL and Ubuntu (will silently fail on AWS WorkSpaces)
+# try {
+#     wsl --install -d Ubuntu
+#     Log "✅ WSL and Ubuntu installed."
+#     $Summary += "✅ WSL and Ubuntu installed."
+# } catch {
+#     Log "⚠ WSL or Ubuntu install failed or not supported."
+#     $Summary += "⚠ WSL/Ubuntu install failed or unsupported."
+# }
+
+function Test-CommandAvailable {
+    param ([string]$cmd)
+    $null -ne (Get-Command $cmd -ErrorAction SilentlyContinue)
 }
-catch {
-    Log "⚠ WSL or Ubuntu install failed or not supported."
-    $Summary += "⚠ WSL/Ubuntu install failed or unsupported."
+
+# Ensure WSL is installed
+if (-not (Test-CommandAvailable "wsl")) {
+    Log "⚠ WSL command not found. Attempting to install WSL via winget ..."
+    $wslInstall = Start-Process -FilePath "winget" -ArgumentList "install --id=Microsoft.WSL --source=msstore --accept-package-agreements --accept-source-agreements" -Wait -PassThru
+    if ($wslInstall.ExitCode -eq 0) {
+        Log "✅ WSL installed successfully."
+    }
+    else {
+        Log "❌ Failed to install WSL. Exit code: $($wslInstall.ExitCode)"
+        return
+    }
+}
+
+if (Test-CommandAvailable "wsl") {
+    $ubuntuInstalled = wsl --list --quiet | Where-Object { $_ -eq "Ubuntu" }
+    if ($ubuntuInstalled) {
+        Log "✅ Ubuntu has been already installed in WSL, skipped."
+    }
+    else {
+        Log "➡ Installing Ubuntu with WSL ..."
+        Install-WSLWithUbuntu
+    }
+}
+else {
+    Log "⚠ WSL is not available on this system. Skipping Ubuntu installation."
 }
 
 # Install VS Code extensions (user)
-Install-VSCodeExtensions
+# Install-VSCodeExtensions
 
 # Register weekly update task
 Register-WeeklyUpdateTask
@@ -305,5 +595,6 @@ Register-WeeklyUpdateTask
 $Summary | Out-File -FilePath $LogPath -Append
 
 # Launch new PowerShell for PATH validation
-Start-NewValidationSession
-Log "✅ Dev setup completed at $(Get-Date)"
+# Launch-NewValidationSession
+Test-InstalledTools
+Log "✅ Dev Tools setup completed!"
