@@ -1,0 +1,34 @@
+Windows Registry Editor Version 5.00
+
+; Add Open Git Bash Here to directory context menu
+[HKEY_CLASSES_ROOT\Directory\shell\git_shell]
+@="Open Git Bash Here(&S)"
+"Icon"="\"C:\\Program Files\\Git\\git-bash.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\git_shell\command]
+@="\"C:\\Program Files\\Git\\git-bash.exe\" \"--cd=%1\""
+
+; Add Open Git Bash Here to directory background context menu
+[HKEY_CLASSES_ROOT\Directory\Background\shell\git_shell]
+@="Open Git Bash Here(&S)"
+"Icon"="\"C:\\Program Files\\Git\\git-bash.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\git_shell\command]
+@="\"C:\\Program Files\\Git\\git-bash.exe\" \"--cd=%v.\""
+
+; Add Open Git GUI Here to directory context menu
+[HKEY_CLASSES_ROOT\Directory\shell\git_gui]
+@="Open Git GUI Here(&I)"
+"Icon"="\"C:\\Program Files\\Git\\cmd\\git-gui.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\git_gui\command]
+@="\"C:\\Program Files\\Git\\cmd\\git-gui.exe\" \"--working-dir\" \"%1\""
+
+; Add Open Git GUI Here to directory background context menu
+[HKEY_CLASSES_ROOT\Directory\Background\shell\git_gui]
+@="Open Git GUI Here(&I)"
+"Icon"="\"C:\\Program Files\\Git\\cmd\\git-gui.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\git_gui\command]
+@="\"C:\\Program Files\\Git\\cmd\\git-gui.exe\" \"--working-dir\" \"%v.\""
+

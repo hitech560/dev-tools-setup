@@ -1,0 +1,90 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\Directory\shell\OpenWTHere]
+"MUIVerb"="Open in Windows Terminal"
+"Extended"=-
+"SubCommands"=""
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\001flyout]
+"MUIVerb"="Default Profile"
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\001flyout\command]
+@="wt.exe -d \"%1\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\002flyout]
+"MUIVerb"="Command Prompt"
+"Icon"="imageres.dll,-5323"
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\002flyout\command]
+@="wt.exe -p \"Command Prompt\" -d \"%1\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\003flyout]
+"MUIVerb"="PowerShell"
+"Icon"="powershell.exe"
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\003flyout\command]
+@="wt.exe -p \"Windows PowerShell\" -d \"%1\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\004flyout]
+"MUIVerb"="Git Bash"
+"Icon"="\"C:\\Program Files\\Git\\git-bash.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\004flyout\command]
+@="wt.exe -p \"Git Bash\" -d \"%1\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\005flyout]
+"MUIVerb"="Ubuntu"
+"Icon"="\"D:\\Users\\liuje\\AppData\\Local\\wsl\\{2c9d1da3-f5a5-4b61-a4d7-fd20d3734c80}\\shortcut.ico\""
+
+[HKEY_CLASSES_ROOT\Directory\Shell\OpenWTHere\shell\005flyout\command]
+@="wt.exe -p \"Ubuntu\" -d \"%1\\.\""
+
+
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\OpenWTHere]
+"MUIVerb"="Open in Windows Terminal"
+"Extended"=-
+"SubCommands"=""
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\001flyout]
+"MUIVerb"="Default Profile"
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\001flyout\command]
+@="wt.exe -d \"%V\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\002flyout]
+"MUIVerb"="Command Prompt"
+"Icon"="imageres.dll,-5323"
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\002flyout\command]
+@="wt.exe -p \"Command Prompt\" -d \"%V\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\003flyout]
+"MUIVerb"="PowerShell"
+"Icon"="powershell.exe"
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\003flyout\command]
+@="wt.exe -p \"Windows PowerShell\" -d \"%V\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\004flyout]
+"MUIVerb"="Git Bash"
+"Icon"="\"C:\\Program Files\\Git\\git-bash.exe\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\004flyout\command]
+@="wt.exe -p \"Git Bash\" -d \"%V\\.\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\005flyout]
+"MUIVerb"="Ubuntu"
+"Icon"="\"D:\\Users\\liuje\\AppData\\Local\\wsl\\{2c9d1da3-f5a5-4b61-a4d7-fd20d3734c80}\\shortcut.ico\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\Shell\OpenWTHere\shell\005flyout\command]
+@="wt.exe -p \"Ubuntu\" -d \"%V\\.\""

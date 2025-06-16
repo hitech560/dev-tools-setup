@@ -1,0 +1,9 @@
+Windows Registry Editor Version 5.00
+
+[-HKEY_CLASSES_ROOT\Directory\shell\git_shell]
+
+[-HKEY_CLASSES_ROOT\Directory\shell\git_gui]
+
+[-HKEY_CLASSES_ROOT\Directory\Background\shell\git_shell]
+
+[-HKEY_CLASSES_ROOT\Directory\Background\shell\git_gui]
