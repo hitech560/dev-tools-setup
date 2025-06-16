@@ -51,6 +51,11 @@ function Log {
     )
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
+    # If single multiline string, split into lines
+    if ($msg.Count -eq 1) {
+        $msg = $msg -split "`r?`n"
+    }
+
     for ($i = 0; $i -lt $msg.Count; $i++) {
         if ($i -gt 0) {
             $outputLine = "`t"*3 + $msg[$i]
@@ -64,25 +69,6 @@ function Log {
     }
 }
 
-# Attempt to find full path to winget.exe
-$WingetPath = (Get-Command "winget.exe" -ErrorAction SilentlyContinue).Source
-if (-not $WingetPath) {
-    $possiblePaths = @(
-        "$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe",
-        "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\winget.exe"
-    )
-    foreach ($path in $possiblePaths) {
-        if (Test-Path $path) {
-            $WingetPath = $path
-            break
-        }
-    }
-}
-if (-not $WingetPath) {
-    Log "❌ winget not found in standard paths."
-    return
-}
-
 function Update-App {
     param([string]$AppId, [string]$AppName)
 
@@ -91,15 +77,22 @@ function Update-App {
         $info = winget list --source winget --exact --id $AppId | Select-String -SimpleMatch "$AppId"
         if ($info) {
             Log "🔄 Attempting to upgrade $AppName ..."
-            $installOutput = winget upgrade --source winget --id $AppId -e --silent --accept-source-agreements --accept-package-agreements
+            $updateOutput = winget upgrade --source winget --id $AppId -e --silent --accept-source-agreements --accept-package-agreements
             # & $WingetPath upgrade --source winget --id $AppId -e --silent --accept-source-agreements --accept-package-agreements
-            Log  $installOutput
-            Log "✅ $AppName completed."
+            #Log  $updateOutput + "✅ $AppName completed."
+            # Log "✅ $AppName completed."
+            $updateOutput += "✅ $AppName completed."
         } else {
-            Log "⚠ $AppName not installed. Skipping ..."
+            # Log "⚠ $AppName not installed. Skipping ..."
+            $updateOutput = "⚠ $AppName not installed. Skipping ..."
         }
     } catch {
-        Log "❌ Failed to upgrade ${AppName}: $_"
+        # Log  $updateOutput + "❌ Failed to upgrade ${AppName}: `n$($_ | Out-String)"
+        # Log "❌ Failed to upgrade ${AppName}: `n$($_ | Out-String)"
+        $updateOutput += "❌ Failed to upgrade ${AppName}: `n$($_ | Out-String)"
+    }
+    finally {
+        Log $updateOutput
     }
 }
 
@@ -128,103 +121,203 @@ function Update-App {
 
 function Update-AWS-CDK {
     # ✅ Upgrade AWS CDK via npm
-    if (Get-Command npm -ErrorAction SilentlyContinue) {
-        try {
-            npm update -g aws-cdk
-            Log "✅ AWS CDK updated via npm."
-        } catch {
-            Log "❌ AWS CDK npm update failed: $_"
+    try {
+        if (Get-Command npm -ErrorAction SilentlyContinue) {
+            $updateOutput = npm update -g aws-cdk
+            $updateOutput += "✅ AWS CDK updated via npm."
         }
-    } else {
-        Log "⚠ npm not found. Skipping AWS CDK update."
+        else {
+            $updateOutput = "⚠ npm not found. Skipping AWS CDK update."
+        }
     }
+    catch {
+        $updateOutput += "❌ AWS CDK npm update failed: `n$($_ | Out-String)"
+    }
+    finally {
+        Log $updateOutput
+    }
+
+    # if (Get-Command npm -ErrorAction SilentlyContinue) {
+    #     try {
+    #         $updateOutput = npm update -g aws-cdk
+    #         # Log  $updateOutput + "✅ AWS CDK updated via npm."
+    #         # Log "✅ AWS CDK updated via npm."
+    #         $updateOutput += "✅ AWS CDK updated via npm."
+    #     } catch {
+    #         # Log  $updateOutput + "❌ AWS CDK npm update failed: `n$($_ | Out-String)"
+    #         # Log "❌ AWS CDK npm update failed: $_"
+    #         $updateOutput += "❌ AWS CDK npm update failed: `n$($_ | Out-String)"
+    #     }
+    # } else {
+    #     # Log "⚠ npm not found. Skipping AWS CDK update."
+    #     $updateOutput = "⚠ npm not found. Skipping AWS CDK update."
+    # }
+    # Log $updateOutput
 }
 
 function Update-uv {
     # ✅ Update uv if available
-    if (Get-Command uv -ErrorAction SilentlyContinue) {
-        try {
-            uv self update
-            Log "✅ uv updated."
-        } catch {
-            Log "❌ uv update failed: $_"
+    try {
+        if (Get-Command uv -ErrorAction SilentlyContinue) {
+            $updateOutput = uv self update 2>&1
+            $updateOutput += "✅ uv updated."
         }
-    } else {
-        Log "⚠ uv not found. Skipping ..."
+        else {
+            $updateOutput = "⚠ uv not found. Skipping ..."
+        }
     }
+    catch {
+        $updateOutput += "❌ uv update failed: `n$($_ | Out-String)"
+    }
+    finally {
+        Log $updateOutput
+    }
+
+    # if (Get-Command uv -ErrorAction SilentlyContinue) {
+    #     try {
+    #         $updateOutput = uv self update 2>&1
+    #         Log  $updateOutput + "✅ uv updated."
+    #         # Log "✅ uv updated."
+    #     } catch {
+    #         Log  $updateOutput + "❌ uv update failed: `n$($_ | Out-String)"
+    #         # Log "❌ uv update failed: $_"
+    #     }
+    # } else {
+    #     Log "⚠ uv not found. Skipping ..."
+    # }
 }
 
 function Update-VSCodeExtensions($extensions) {
     # ✅ Upgrade VS Code Extensions
-    if (Get-Command code -ErrorAction SilentlyContinue) {
-        try {
-            # $extensions = @(
-            #     "AmazonWebServices.amazon-q-vscode",
-            #     "AmazonWebServices.aws-toolkit-vscode",
-            #     "ms-azuretools.vscode-docker",
-            #     "ms-python.python",
-            #     "ms-toolsai.jupyter",
-            #     "Postman.postman-for-vscode"
-            # )
+    try {
+        if (Get-Command code -ErrorAction SilentlyContinue) {
             foreach ($ext in $extensions) {
-                code --install-extension $ext --force
+                $updateOutput = @("🔄 Attempting to update VS Code extension: ${ext} ...")
+                $updateOutput += code --install-extension $ext --force
+                Log $updateOutput + "✅ VS Code extension updated: ${ext}."
             }
-            Log "✅ VS Code extensions $ext updated."
-        } catch {
-            Log "❌ VS Code extension $ext update failed: $_"
+            $updateOutput = "✅ All VS Code extensions update completed."
         }
-    } else {
-        Log "⚠ VS Code not found. Skipping extensions update ..."
+        else {
+            $updateOutput = "⚠ VS Code not found. Skipping extensions update ..."
+        }
     }
+    catch {
+        $updateOutput = "❌ VS Code extension update failed ${ext}: `n$($_ | Out-String)"
+    }
+    finally {
+        Log $updateOutput
+    }
+
+    # if (Get-Command code -ErrorAction SilentlyContinue) {
+    #     try {
+    #         # $extensions = @(
+    #         #     "AmazonWebServices.amazon-q-vscode",
+    #         #     "AmazonWebServices.aws-toolkit-vscode",
+    #         #     "ms-azuretools.vscode-docker",
+    #         #     "ms-python.python",
+    #         #     "ms-toolsai.jupyter",
+    #         #     "Postman.postman-for-vscode"
+    #         #bingqiling
+    #         # )
+    #         foreach ($ext in $extensions) {
+    #             $updateOutput = code --install-extension $ext --force
+    #             Log $updateOutput + "✅ VS Code extension updated: ${ext}."
+    #             # Log "✅ VS Code extension updated: ${ext}."
+    #         }
+    #         Log "✅ All VS Code extensions update completed."
+    #     } catch {
+    #         Log "❌ VS Code extension update failed ${ext}: `n$($_ | Out-String)"
+    #     }
+    # } else {
+    #     Log "⚠ VS Code not found. Skipping extensions update ..."
+    # }
 }
 
-if (-not (Test-Path $AppListPath)) {
-    Log "❌ App list JSON file not found: $AppListPath"
-    exit 1
+function Test-WinGetPath {
+    # Attempt to find full path to winget.exe
+    $WingetPath = (Get-Command "winget.exe" -ErrorAction SilentlyContinue).Source
+    if (-not $WingetPath) {
+        $possiblePaths = @(
+            "$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe",
+            "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\winget.exe"
+        )
+        foreach ($path in $possiblePaths) {
+            if (Test-Path $path) {
+                $WingetPath = $path
+                break
+            }
+        }
+    }
+    if (-not $WingetPath) {
+        Log "❌ winget not found in standard paths, exiting ..."
+        exit 1
+    }
+
+    Log "✅ Found winget at: $WingetPath"
+    $progressPreference = 'silentlyContinue'
 }
-$appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
 
-# 🎯 Upgrade selected apps individually
-Log "==========================================="
-Log "🔄 Starting selective dev tool updates ..."
+function Update-AppMain {
+    # 🎯 Upgrade selected apps individually
+    Log "==============================================================="
+    Log "🔄 Starting selective dev tool updates ..."
 
-foreach ($app in $appListRaw.apps) {
-    if ($app.update) {
-        switch ($app.name) {
-            "AWS CDK" {
-                Update-AWS-CDK
-            }
-            "uv" {
-                Update-uv
-            }
-            default {
-                Update-App -AppId $app.id -AppName $app.name
+    # Check if winget is available
+    Test-WinGetPath
 
-                if ($app.extensions) {
-                    # foreach ($ext in $app.extensions) {
-                    #     try {
-                    #         code --install-extension $ext --force
-                    #         Log "✅ VS Code extension installed: $ext"
-                    #     } catch {
-                    #         Log "❌ Failed to install extension $ext: $_"
-                    #     }
-                    # }
-                    if ($app.scope -eq "user") {
-                        # install scope: user
-                        $env:PATH += ";$env:UserProfile\AppData\Local\Programs\Microsoft VS Code\bin\"
+    if (-not (Test-Path $AppListPath)) {
+        Log "❌ App list JSON file not found: $AppListPath"
+        exit 1
+    }
+    $appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
+
+    foreach ($app in $appListRaw.apps) {
+        if ($app.update) {
+            switch ($app.name) {
+                "AWS CDK" {
+                    Log "🔄 Attempting to upgrade AWS CDK via npm ..."
+                    Update-AWS-CDK
+                    continue
+                }
+                "uv" {
+                    Log "🔄 Attempting to upgrade uv ..."
+                    Update-uv
+                    continue
+                }
+                default {
+                    Update-App -AppId $app.id -AppName $app.name
+
+                    if ($app.extensions) {
+                        # foreach ($ext in $app.extensions) {
+                        #     try {
+                        #         code --install-extension $ext --force
+                        #         Log "✅ VS Code extension installed: $ext"
+                        #     } catch {
+                        #         Log "❌ Failed to install extension $ext: $_"
+                        #     }
+                        # }
+                        if ($app.scope -eq "user") {
+                            # install scope: user
+                            $env:PATH += ";$env:UserProfile\AppData\Local\Programs\Microsoft VS Code\bin\"
+                        }
+                        else {
+                            # install scope: machine
+                            $env:PATH += ";$env:ProgramFiles\Microsoft VS Code\bin\"
+                        }
+                        Log "🔄 Attempting to upgrade VS Code extesions ..."
+                        Update-VSCodeExtensions $app.extensions
                     }
-                    else {
-                        # install scope: machine
-                        $env:PATH += ";$env:ProgramFiles\Microsoft VS Code\bin\"
-                    }
-                    Update-VSCodeExtensions $app.extensions
                 }
             }
         }
+        else {
+            Log "⚠ Skipping $($app.name) ..."
+        }
     }
-    else {
-        Log "⚠ Skipping $($app.name) ..."
-    }
+
+    Log "✅ Selective dev tool update completed."
 }
 
-Log "✅ Selective dev tool update completed."
+# update selected apps
+Update-AppMain

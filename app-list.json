@@ -4,13 +4,13 @@
       "name": "7-Zip",
       "id": "7zip.7zip",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Notepad++",
       "id": "Notepad++.Notepad++",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Node.js LTS",
@@ -46,7 +46,7 @@
       "name": "PyCharm Community Edition",
       "id": "JetBrains.PyCharm.Community",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Visual Studio Code",
@@ -66,7 +66,7 @@
       "name": "PowerToys",
       "id": "Microsoft.PowerToys",
       "scope": "user",
-      "update": true
+      "update": false
     },
     {
       "name": "Google Chrome",
@@ -78,7 +78,7 @@
       "name": "Microsoft SQL Server Management Studio",
       "id": "Microsoft.SQLServerManagementStudio",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Docker Desktop",
@@ -102,73 +102,73 @@
       "name": "draw.io",
       "id": "JGraph.Draw",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Amazon Athena ODBC Driver",
       "id": "Amazon.AthenaODBCDriver.2",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "psqlodbc",
       "id": "PostgreSQL.psqlODBC",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Microsoft ODBC Driver 18 for SQL Server",
       "id": "Microsoft.msodbcsql.18",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Microsoft PowerBI Desktop",
       "id": "Microsoft.PowerBI",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Adobe Acrobat Reader (64-bit)",
       "id": "Adobe.Acrobat.Reader.64-bit",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "RingCentral",
       "id": "RingCentral.RingCentral",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "DbVisualizer",
       "id": "DBVis.DBVisualizer",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "KeePassXC",
       "id": "KeePassXCTeam.KeePassXC",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "WinDirStat",
       "id": "WinDirStat.WinDirStat",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "WinSCP",
       "id": "WinSCP.WinSCP",
       "scope": "machine",
-      "update": true
+      "update": false
     },
     {
       "name": "Postman",
       "id": "Postman.Postman",
       "scope": "user",
-      "update": true
+      "update": false
     },
     {
       "name": "AWS CDK",
@@ -181,6 +181,12 @@
       "id": "astral-sh.uv",
       "scope": "user",
       "update": true
-    }
+    },
+    {
+      "name": "WSL with Ubuntu",
+      "id": "WSL.Ubuntu",
+      "scope": "machine",
+      "update": false
+    }    
   ]
 }

@@ -69,6 +69,11 @@ function Log {
     )
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
+    # If single multiline string, split into lines
+    if ($msg.Count -eq 1) {
+        $msg = $msg -split "`r?`n"
+    }
+    
     for ($i = 0; $i -lt $msg.Count; $i++) {
         if ($i -gt 0) {
             $outputLine = "`t"*3 + $msg[$i]
@@ -118,9 +123,9 @@ function Install-Winget {
     Log "🔁 Trying PowerShell module method to bootstrap winget ..."
     try {
         Install-PackageProvider -Name NuGet -Force | Out-Null
-        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope CurrentUser | Out-Null
+        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope AllUsers | Out-Null
         Import-Module Microsoft.WinGet.Client -Force
-        Repair-WinGetPackageManager -AllUser
+        Repair-WinGetPackageManager -AllUsers
         Start-Sleep -Seconds 5
     }
     catch {
@@ -148,7 +153,7 @@ function Test-RepairWinget {
     for ($i = 1; $i -le $MaxAttempts; $i++) {
         try {
             Log "⚙ Attempt ${i}: Repairing Winget package manager..."
-            Repair-WinGetPackageManager -AllUser
+            Repair-WinGetPackageManager -AllUsers
             Log "✅ Repair-WinGetPackageManager succeeded on attempt $i."
             return $true
         }
@@ -170,7 +175,7 @@ function Test-WinGetAvailable {
         return
     }
 
-    Log "🛠 Attempting to install Winget via PowerShell module..."
+    Log "🛠 Attempting to install Winget via PowerShell module ..."
 
     try {
         Install-PackageProvider -Name NuGet -Force -Scope AllUsers | Out-Null
@@ -453,11 +458,6 @@ function Install-WSLWithUbuntu {
     }
 }
 
-# Start
-Log "🛠 Dev setup started at $(Get-Date)"
-# Ensure-Winget
-Test-WinGetAvailable
-
 # # Core dev tools (System-wide)
 # Install-AppIfMissing -AppId "7zip.7zip" -AppName "7-Zip" # system
 # Install-AppIfMissing -AppId "Notepad++.Notepad++" -AppName "Notepad++" # system
@@ -495,66 +495,40 @@ Test-WinGetAvailable
 # Install-AppIfMissing -AppId "WinDirStat.WinDirStat" -AppName "WinDirStat" # system
 # Install-AppIfMissing -AppId "WinSCP.WinSCP" -AppName "WinSCP" # system
 
-if (-not (Test-Path $AppListPath)) {
-    Log "❌ App list JSON file not found: $AppListPath"
-    exit 1
+function Install-uv {
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        Log "⚠ uv is not available, installing uv via Astral.sh ..."
+        # UV - custom install (user)
+        # Install-AppIfMissing -AppName "uv" -CustomInstall -CustomCommand "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+        Install-AppIfMissing -AppId "astral-sh.uv" -AppName "uv" -CustomInstall -CustomCommand 'powershell -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"'
+    }
+    else {
+        Log "✅ uv is available: $(Get-Command uv).Source, skipped."
+    }
 }
-$appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
 
-foreach ($app in $appListRaw.apps) {
-    Install-AppIfMissing -AppId $app.id -AppName $app.name -AppScope $app.scope
-
-    if ($app.extensions) {
-        # foreach ($ext in $app.extensions) {
-        #     try {
-        #         code --install-extension $ext --force
-        #         Log "✅ VS Code extension installed: $ext"
-        #     } catch {
-        #         Log "❌ Failed to install extension $ext: $_"
-        #     }
-        # }
-        if ($app.scope -eq "user") {
-            # install scope: user
-            $env:PATH += ";$env:UserProfile\AppData\Local\Programs\Microsoft VS Code\bin\"
+function Install-AWS-CDK {
+    # AWS CDK via npm (user)
+    if (-not (Get-Command cdk -ErrorAction SilentlyContinue)) {
+        Log "➡ Installing AWS CDK via npm..."
+        # Add global npm bin to PATH in this session
+        # $npmGlobalBin = npm bin -g
+        # $env:PATH += ";$npmGlobalBin"
+        $env:PATH += ";$env:ProgramFiles\nodejs;$env:AppData\npm;C:\Program Files\Git\cmd"
+        try {
+            npm install -g aws-cdk
+            Log "✅ AWS CDK installed."
+            $Summary += "✅ AWS CDK installed."
         }
-        else {
-            # install scope: machine
-            $env:PATH += ";$env:ProgramFiles\Microsoft VS Code\bin\"
+        catch {
+            Log "❌ AWS CDK installation failed."
+            $Summary += "❌ AWS CDK installation failed."
         }
-        Install-VSCodeExtensions $app.extensions
     }
-}
-
-if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    Log "❌ uv is not available."
-    # UV - custom install (user)
-    # Install-AppIfMissing -AppName "uv" -CustomInstall -CustomCommand "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
-    Install-AppIfMissing -AppId "astral-sh.uv" -AppName "uv" -CustomInstall -CustomCommand 'powershell -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"'
-}
-else {
-    Log "✅ uv is available: $(Get-Command uv).Source, skipped."
-}
-
-# AWS CDK via npm (user)
-if (-not (Get-Command cdk -ErrorAction SilentlyContinue)) {
-    Log "➡ Installing AWS CDK via npm..."
-    # Add global npm bin to PATH in this session
-    # $npmGlobalBin = npm bin -g
-    # $env:PATH += ";$npmGlobalBin"
-    $env:PATH += ";$env:ProgramFiles\nodejs;$env:AppData\npm;C:\Program Files\Git\cmd"
-    try {
-        npm install -g aws-cdk
-        Log "✅ AWS CDK installed."
-        $Summary += "✅ AWS CDK installed."
+    else {
+        Log "✔ AWS CDK has been already installed, skipped."
+        $Summary += "✔ AWS CDK has been already installed, skipped."
     }
-    catch {
-        Log "❌ AWS CDK installation failed."
-        $Summary += "❌ AWS CDK installation failed."
-    }
-}
-else {
-    Log "✔ AWS CDK has been already installed, skipped."
-    $Summary += "✔ AWS CDK has been already installed, skipped."
 }
 
 # # Enable Hyper-V (if you're using Hyper-V backend)
@@ -575,32 +549,95 @@ function Test-CommandAvailable {
     $null -ne (Get-Command $cmd -ErrorAction SilentlyContinue)
 }
 
-# Ensure WSL is installed
-if (-not (Test-CommandAvailable "wsl")) {
-    Log "⚠ WSL command not found. Attempting to install WSL via winget ..."
-    $wslInstall = Start-Process -FilePath "winget" -ArgumentList "install --id=Microsoft.WSL --source=msstore --accept-package-agreements --accept-source-agreements" -Wait -PassThru
-    if ($wslInstall.ExitCode -eq 0) {
-        Log "✅ WSL installed successfully."
+function Test-WSLwithUbuntu {
+    # If OS is Windows Sandbox, skip WSL install
+    if ($env:USERNAME -eq "WDAGUtilityAccount") {
+        Log "⚠️ Skipping WSL install – Windows Sandbox does not support required features."
+        return
+    }
+    
+    # Ensure WSL is installed
+    if (-not (Test-CommandAvailable "wsl")) {
+        Log "⚠ WSL command not found. Attempting to install WSL via winget ..."
+        $wslInstall = Start-Process -FilePath "winget" -ArgumentList "install --id=Microsoft.WSL --source=msstore --accept-package-agreements --accept-source-agreements" -Wait -PassThru
+        if ($wslInstall.ExitCode -eq 0) {
+            Log "✅ WSL installed successfully."
+        }
+        else {
+            Log "❌ Failed to install WSL. Exit code: $($wslInstall.ExitCode)"
+            return
+        }
+    }
+
+    if (Test-CommandAvailable "wsl") {
+        $ubuntuInstalled = wsl --list --quiet | Where-Object { $_ -eq "Ubuntu" }
+        if ($ubuntuInstalled) {
+            Log "✅ Ubuntu has been already installed in WSL, skipped."
+        }
+        else {
+            Log "➡ Installing Ubuntu with WSL ..."
+            Install-WSLWithUbuntu
+        }
     }
     else {
-        Log "❌ Failed to install WSL. Exit code: $($wslInstall.ExitCode)"
-        return
+        Log "⚠ WSL is not available on this system. Skipping Ubuntu installation."
     }
 }
 
-if (Test-CommandAvailable "wsl") {
-    $ubuntuInstalled = wsl --list --quiet | Where-Object { $_ -eq "Ubuntu" }
-    if ($ubuntuInstalled) {
-        Log "✅ Ubuntu has been already installed in WSL, skipped."
+function Install-DevTools {
+    if (-not (Test-Path $AppListPath)) {
+        Log "❌ App list JSON file not found: $AppListPath"
+        exit 1
     }
-    else {
-        Log "➡ Installing Ubuntu with WSL ..."
-        # Install-WSLWithUbuntu
+    $appListRaw = Get-Content $AppListPath -Raw | ConvertFrom-Json
+
+    foreach ($app in $appListRaw.apps) {
+        switch ($app.name) {
+            "uv" {
+                Install-uv
+                continue
+            }
+            "AWS CDK" {
+                Install-AWS-CDK
+                continue
+            }
+            "WSL with Ubuntu" {
+                Test-WSLwithUbuntu
+                continue
+            }
+            default {
+                Install-AppIfMissing -AppId $app.id -AppName $app.name -AppScope $app.scope
+
+                if ($app.extensions) {
+                    # foreach ($ext in $app.extensions) {
+                    #     try {
+                    #         code --install-extension $ext --force
+                    #         Log "✅ VS Code extension installed: $ext"
+                    #     } catch {
+                    #         Log "❌ Failed to install extension $ext: $_"
+                    #     }
+                    # }
+                    if ($app.scope -eq "user") {
+                        # install scope: user
+                        $env:PATH += ";$env:UserProfile\AppData\Local\Programs\Microsoft VS Code\bin\"
+                    }
+                    else {
+                        # install scope: machine
+                        $env:PATH += ";$env:ProgramFiles\Microsoft VS Code\bin\"
+                    }
+                    Install-VSCodeExtensions $app.extensions
+                }
+            }
+        }
     }
 }
-else {
-    Log "⚠ WSL is not available on this system. Skipping Ubuntu installation."
-}
+
+# Start
+Log "🛠 Dev setup started at $(Get-Date)"
+# Ensure-Winget
+Test-WinGetAvailable
+
+Install-DevTools
 
 # Install VS Code extensions (user)
 # Install-VSCodeExtensions

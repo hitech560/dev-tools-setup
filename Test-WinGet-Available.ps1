@@ -1,18 +1,42 @@
 ﻿# Requires Administrator privileges
 
 # Set console and output encoding to UTF-8 to avoid Chinese output garbling
-$OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
 $LogPath     = "$Env:ProgramData\devtools-setup-log.txt"
 # $AppListPath = "$Env:ProgramData\app-list.json"
 
 # $Summary = @()
 
+# function Log {
+#     param([string]$Message)
+#     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+#     "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding utf8
+#     Write-Host $Message
+# }
 function Log {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding utf8
-    Write-Host $Message
+    param(
+        [string[]]$msg  # Accepts single or multiple lines
+    )
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+    # If single multiline string, split into lines
+    if ($msg.Count -eq 1) {
+        $msg = $msg -split "`r?`n"
+    }
+    
+    for ($i = 0; $i -lt $msg.Count; $i++) {
+        if ($i -gt 0) {
+            $outputLine = "`t" * 3 + $msg[$i]
+        }
+        else {
+            $outputLine = "$ts`t" + $msg[$i]
+        }
+
+        Write-Host $outputLine
+        $outputLine | Out-File -FilePath $logPath -Append -Encoding utf8
+    }
 }
 
 function Test-RepairWinget {
@@ -23,8 +47,8 @@ function Test-RepairWinget {
     for ($i = 1; $i -le $MaxAttempts; $i++) {
         try {
             Log "⚙ Attempt ${i}: Repairing Winget package manager ..."
-            Repair-WinGetPackageManager -AllUser
-            Log "✅ Repair-WinGetPackageManager succeeded on attempt $i."
+            Repair-WinGetPackageManager -AllUsers -Force | Out-Null
+            Log "✅ Repair-WinGetPackageManager succeeded on attempt ${i}."
             return $true
         } catch {
             Log "❌ Attempt $i failed: $_"
@@ -54,10 +78,12 @@ function Test-WinGetAvailable {
                 Log "✅ Winget installed successfully via PowerShell module."
                 return
             }
-        } else {
+        }
+        else {
             Log "❌ Winget repair failed after multiple attempts."
         }
-    } catch {
+    }
+    catch {
         Log "⚠ PowerShell module method failed: $_"
     }
 
@@ -75,10 +101,12 @@ function Test-WinGetAvailable {
             Log "✅ Winget installed successfully via App Installer."
             Log "🔁 Restarting script to continue setup with Winget ..."
             Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-        } else {
+        }
+        else {
             Log "❌ Winget still not available after fallback, existing ..."
         }
-    } catch {
+    }
+    catch {
         Log "❌ Failed to install Winget via App Installer fallback: $_ , existing ..."
     }
     finally {
